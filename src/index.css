@@ -1,0 +1,89 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  font-family: "Pretendard Variable", "Pretendard", "Noto Sans KR", sans-serif;
+  --background: #09111c;
+  --background-strong: #06101d;
+  --foreground: #f5f7fb;
+  --card: rgba(17, 27, 43, 0.88);
+  --card-strong: rgba(11, 19, 32, 0.92);
+  --muted: #8da0b8;
+  --muted-soft: #5f7088;
+  --border: rgba(160, 180, 210, 0.15);
+  --border-strong: rgba(160, 180, 210, 0.28);
+  --primary: #6eb9ff;
+  --primary-strong: #2d8fff;
+  --accent: #16324e;
+  --success: #33d69f;
+  --warning: #f4bf4f;
+  --danger: #ff6b6b;
+  --waiting: #9db0c8;
+  --shadow: 0 24px 64px rgba(3, 8, 17, 0.45);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-strong: var(--card-strong);
+  --color-muted: var(--muted);
+  --color-muted-soft: var(--muted-soft);
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-waiting: var(--waiting);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    background:
+      radial-gradient(circle at top left, rgba(45, 143, 255, 0.18), transparent 34%),
+      radial-gradient(circle at top right, rgba(51, 214, 159, 0.1), transparent 28%),
+      linear-gradient(180deg, #0a121f 0%, #09111c 38%, #060d18 100%);
+  }
+
+  body {
+    @apply m-0 min-h-screen bg-background text-foreground antialiased;
+  }
+
+  a {
+    @apply text-inherit no-underline;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  button {
+    @apply cursor-pointer;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer utilities {
+  .glass-card {
+    background: linear-gradient(180deg, rgba(17, 27, 43, 0.92), rgba(11, 19, 32, 0.9));
+    box-shadow: var(--shadow);
+  }
+
+  .section-grid {
+    @apply grid gap-4 md:grid-cols-2 xl:grid-cols-4;
+  }
+}

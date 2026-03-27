@@ -26,7 +26,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/72 p-4 backdrop-blur-sm">
       <div
         className={cn(
-          'w-full max-w-2xl rounded-3xl border border-border-strong bg-[#0c1728] p-6 shadow-2xl',
+          'max-h-[calc(100vh-2rem)] w-full max-w-2xl overflow-y-auto rounded-3xl border border-border-strong bg-[#0c1728] p-6 shadow-2xl',
           widthClassName,
         )}
       >

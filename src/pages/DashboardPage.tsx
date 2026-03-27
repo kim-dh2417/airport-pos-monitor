@@ -1,20 +1,27 @@
 import {
   AlertTriangle,
+  Bell,
   CalendarDays,
   Eye,
   Plus,
   Search,
-  Settings2,
+  Settings,
   Upload,
 } from 'lucide-react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Header } from '../components/layout/Header'
 import { Button, ButtonLink } from '../components/common/Button'
 import { Card } from '../components/common/Card'
 import { Modal } from '../components/common/Modal'
+import {
+  NotificationToastStack,
+  type PrototypeNotificationItem,
+} from '../components/dashboard/NotificationToastStack'
 import { StoresTable } from '../components/dashboard/StoresTable'
 import { SummaryCards } from '../components/dashboard/SummaryCards'
 import { getStatusSummary, stores } from '../data/mockData'
+
+const NOTIFICATION_STORAGE_KEY = 'airport-pos-monitor:pc-alerts-enabled'
 
 export function DashboardPage() {
   const [selectedMonth, setSelectedMonth] = useState('2024-01')
@@ -22,6 +29,24 @@ export function DashboardPage() {
   const [search, setSearch] = useState('')
   const [showHidden, setShowHidden] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [pcAlertsEnabled, setPcAlertsEnabled] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.localStorage.getItem(NOTIFICATION_STORAGE_KEY) === 'true'
+  })
+  const [notificationPermission, setNotificationPermission] = useState<
+    NotificationPermission | 'unsupported'
+  >(() => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      return 'unsupported'
+    }
+    return Notification.permission
+  })
+  const [toastItems, setToastItems] = useState<PrototypeNotificationItem[]>([])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    window.localStorage.setItem(NOTIFICATION_STORAGE_KEY, String(pcAlertsEnabled))
+  }, [pcAlertsEnabled])
 
   const filteredStores = useMemo(() => {
     return stores.filter((store) => {
@@ -41,6 +66,82 @@ export function DashboardPage() {
   }, [search, showHidden, statusFilter])
 
   const summary = getStatusSummary(stores)
+  const permissionLabel =
+    notificationPermission === 'unsupported'
+      ? '미지원 브라우저'
+      : notificationPermission === 'granted'
+        ? '허용됨'
+        : notificationPermission === 'denied'
+          ? '차단됨'
+          : '권한 요청 필요'
+  const permissionToneClassName =
+    notificationPermission === 'granted'
+      ? 'border-success/25 bg-success/10 text-success'
+      : notificationPermission === 'denied'
+        ? 'border-danger/25 bg-danger/10 text-danger'
+        : 'border-warning/25 bg-warning/10 text-warning'
+
+  const dismissToast = (id: string) => {
+    setToastItems((currentItems) => currentItems.filter((item) => item.id !== id))
+  }
+
+  const pushPrototypeNotification = (title: string, message: string) => {
+    const notificationId =
+      typeof crypto !== 'undefined' && 'randomUUID' in crypto
+        ? crypto.randomUUID()
+        : `${Date.now()}-${Math.random()}`
+
+    setToastItems((currentItems) => [
+      {
+        id: notificationId,
+        title,
+        message,
+        timeLabel: '방금 수신됨',
+      },
+      ...currentItems,
+    ])
+
+    window.setTimeout(() => {
+      dismissToast(notificationId)
+    }, 5000)
+
+    if (
+      pcAlertsEnabled &&
+      notificationPermission === 'granted' &&
+      typeof window !== 'undefined' &&
+      'Notification' in window
+    ) {
+      new Notification(title, {
+        body: message,
+        tag: notificationId,
+      })
+    }
+  }
+
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      setNotificationPermission('unsupported')
+      return
+    }
+
+    const result = await Notification.requestPermission()
+    setNotificationPermission(result)
+
+    if (result === 'granted') {
+      setPcAlertsEnabled(true)
+      pushPrototypeNotification(
+        'PC 알림이 활성화되었습니다',
+        '이제 신고 데이터 수신 시 브라우저 알림과 인앱 알림을 함께 받을 수 있습니다.',
+      )
+    }
+  }
+
+  const handleSendPrototypeNotification = () => {
+    pushPrototypeNotification(
+      '스카이라운지 면세점 신고 데이터 수신',
+      'A업체의 금월 신고 데이터가 접수되어 비교 준비 상태로 전환되었습니다.',
+    )
+  }
 
   return (
     <>
@@ -79,8 +180,14 @@ export function DashboardPage() {
               <Upload className="h-4 w-4" />
               엑셀 업로드
             </ButtonLink>
-            <Button variant="secondary" size="icon" onClick={() => setSettingsOpen(true)}>
-              <Settings2 className="h-4 w-4" />
+            <Button
+              variant="secondary"
+              size="icon"
+              onClick={() => setSettingsOpen(true)}
+              aria-label="운영 설정"
+              title="운영 설정"
+            >
+              <Settings className="h-4 w-4" />
             </Button>
           </div>
         </div>
@@ -155,28 +262,93 @@ export function DashboardPage() {
       <Modal
         open={settingsOpen}
         onClose={() => setSettingsOpen(false)}
-        title="매장 노출 설정"
-        description="대시보드에 우선 표시할 매장을 관리합니다."
+        title="운영 설정"
+        description="시연용 PC 알림과 대시보드 노출 설정을 함께 관리합니다."
       >
-        <div className="space-y-3">
-          {stores.slice(0, 6).map((store) => (
-            <label
-              key={store.id}
-              className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3"
-            >
-              <div>
-                <p className="font-medium">{store.name}</p>
-                <p className="text-sm text-muted">{store.posCode}</p>
+        <div className="space-y-6">
+          <section className="rounded-3xl border border-white/8 bg-white/4 p-4">
+            <div className="flex items-start gap-3">
+              <div className="rounded-2xl bg-primary/10 p-3">
+                <Bell className="h-5 w-5 text-primary" />
               </div>
-              <input
-                type="checkbox"
-                defaultChecked={!store.hidden}
-                className="h-4 w-4 accent-[#6eb9ff]"
-              />
-            </label>
-          ))}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm uppercase tracking-[0.24em] text-primary">Alert Channel</p>
+                <h3 className="mt-2 text-lg font-semibold">PC 알림 설정</h3>
+                <p className="mt-2 text-sm leading-6 text-muted">
+                  시연용 프로토타입입니다. 담당자가 브라우저 권한을 허용하면 신고 데이터 수신 시
+                  시스템 알림과 인앱 토스트를 함께 확인할 수 있습니다.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 lg:grid-cols-[1fr_auto]">
+              <label className="flex items-center justify-between rounded-2xl border border-white/8 bg-[#0b1320]/70 px-4 py-3">
+                <div>
+                  <p className="font-medium">PC 알림 수신</p>
+                  <p className="mt-1 text-sm text-muted">
+                    브라우저 알림 권한이 허용된 경우에만 실제 시스템 알림이 표시됩니다.
+                  </p>
+                </div>
+                <input
+                  checked={pcAlertsEnabled}
+                  onChange={(event) => setPcAlertsEnabled(event.target.checked)}
+                  type="checkbox"
+                  className="h-4 w-4 accent-[#6eb9ff]"
+                />
+              </label>
+
+              <div
+                className={`rounded-2xl border px-4 py-3 text-sm font-medium ${permissionToneClassName}`}
+              >
+                권한 상태: {permissionLabel}
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
+                variant="secondary"
+                onClick={handleRequestNotificationPermission}
+                disabled={notificationPermission === 'unsupported'}
+              >
+                권한 요청
+              </Button>
+              <Button
+                onClick={handleSendPrototypeNotification}
+                disabled={notificationPermission === 'unsupported'}
+              >
+                테스트 알림 보내기
+              </Button>
+            </div>
+          </section>
+
+          <section>
+            <div className="mb-3">
+              <p className="text-sm uppercase tracking-[0.24em] text-primary">Store Visibility</p>
+              <h3 className="mt-2 text-lg font-semibold">매장 노출 설정</h3>
+            </div>
+            <div className="space-y-3">
+              {stores.slice(0, 6).map((store) => (
+                <label
+                  key={store.id}
+                  className="flex items-center justify-between rounded-2xl border border-white/8 bg-white/4 px-4 py-3"
+                >
+                  <div>
+                    <p className="font-medium">{store.name}</p>
+                    <p className="text-sm text-muted">{store.posCode}</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    defaultChecked={!store.hidden}
+                    className="h-4 w-4 accent-[#6eb9ff]"
+                  />
+                </label>
+              ))}
+            </div>
+          </section>
         </div>
       </Modal>
+
+      <NotificationToastStack items={toastItems} onDismiss={dismissToast} />
     </>
   )
 }

@@ -32,7 +32,7 @@ export interface DailySales {
   pos: number
   van: number
   reported: number
-  hasIssue: boolean
+  signalLevel: 'neutral' | 'normal' | 'review' | 'suspicious'
 }
 
 export interface MonthlySales {
@@ -184,17 +184,31 @@ export const monthlySales: MonthlySales[] = [
 
 export const dailySales: DailySales[] = Array.from({ length: 31 }, (_, index) => {
   const day = index + 1
-  const hasIssue = [5, 12, 18, 25].includes(day)
   const basePos = 4200000 + day * 118000
   const baseVan = Math.round(basePos * (day % 2 === 0 ? 0.98 : 1.02))
-  const baseReported = Math.round(hasIssue ? basePos * 0.84 : basePos * 0.99)
+  const signalLevel =
+    [5, 18, 25].includes(day)
+      ? 'suspicious'
+      : [12, 19, 24].includes(day)
+        ? 'review'
+        : [2, 9, 16, 23, 30].includes(day)
+          ? 'normal'
+          : 'neutral'
+  const baseReported =
+    signalLevel === 'suspicious'
+      ? Math.round(basePos * 0.84)
+      : signalLevel === 'review'
+        ? Math.round(basePos * 0.93)
+        : signalLevel === 'normal'
+          ? Math.round(basePos * 1.0)
+          : Math.round(basePos * 0.985)
 
   return {
     date: `2024-01-${String(day).padStart(2, '0')}`,
     pos: basePos,
     van: baseVan,
     reported: baseReported,
-    hasIssue,
+    signalLevel,
   }
 })
 

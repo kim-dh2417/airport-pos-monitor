@@ -1,5 +1,4 @@
 import {
-  AlertCircle,
   ArrowLeft,
   Cloud,
   Plane,
@@ -35,6 +34,7 @@ import {
 export function StoreDetailPage() {
   const { storeCode } = useParams()
   const store = getStoreByCode(storeCode)
+  const weekdayLabels = ['월', '화', '수', '목', '금', '토', '일']
   const externalReferences: Array<[string, string, LucideIcon]> = [
     ['탑승객', `${formatNumber(124000)}명`, Users],
     ['항공편', '지연 14편 / 결항 0편', Plane],
@@ -47,6 +47,54 @@ export function StoreDetailPage() {
     신고금액: item.reportAmount / 1000000,
     비교기준값: item.comparisonAmount / 1000000,
   }))
+
+  const calendarData = dailySales.map((day) => {
+    const date = new Date(`${day.date}T00:00:00`)
+    const normalizedDayIndex = (date.getDay() + 6) % 7
+
+    return {
+      ...day,
+      dayLabel: weekdayLabels[normalizedDayIndex],
+      dayIndex: normalizedDayIndex,
+    }
+  })
+
+  const leadingEmptyCellCount = calendarData[0]?.dayIndex ?? 0
+  const trailingEmptyCellCount =
+    calendarData.length === 0
+      ? 0
+      : (7 - ((leadingEmptyCellCount + calendarData.length) % 7 || 7)) % 7
+  const calendarBorderClassName: Record<
+    (typeof calendarData)[number]['signalLevel'],
+    string
+  > = {
+    neutral: 'border-white/10',
+    normal: 'border-success/45',
+    review: 'border-warning/45',
+    suspicious: 'border-danger/45',
+  }
+  const signalLegendItems = [
+    {
+      label: '차이 없음',
+      borderClassName: 'border-white/18',
+      helpText: '비교 불가 또는 데이터 없음',
+    },
+    {
+      label: '정상',
+      borderClassName: 'border-success/45',
+      helpText: '차이율 3% 이하',
+    },
+    {
+      label: '확인 필요',
+      borderClassName: 'border-warning/45',
+      helpText: '차이율 3% 초과 10% 이하',
+    },
+    {
+      label: '이상 의심',
+      borderClassName: 'border-danger/45',
+      helpText: '차이율 10% 초과',
+    },
+  ] as const
 
   return (
     <>
@@ -159,25 +207,73 @@ export function StoreDetailPage() {
           <Card>
             <p className="text-sm uppercase tracking-[0.24em] text-primary">Daily Signal</p>
             <h2 className="mt-2 text-xl font-semibold">일별 매출 캘린더</h2>
-            <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-5">
-              {dailySales.map((day) => (
-                <div
-                  key={day.date}
-                  className={`rounded-2xl border p-4 ${
-                    day.hasIssue ? 'border-danger/25 bg-danger/8' : 'border-white/8 bg-white/4'
-                  }`}
-                >
-                  <p className="text-sm font-medium">{day.date.slice(8)}일</p>
-                  <p className="mt-2 text-xs text-muted">POS {formatNumber(day.pos)}</p>
-                  <p className="text-xs text-muted">VAN {formatNumber(day.van)}</p>
-                  {day.hasIssue ? (
-                    <p className="mt-2 flex items-center gap-1 text-xs text-danger">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      차이 집중일
-                    </p>
-                  ) : null}
+            <div className="mt-3 space-y-2 text-xs">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="inline-flex items-center gap-2 text-muted">
+                  <span className="h-3 w-1 rounded-full bg-[#ffb366]" />
+                  신고금액
+                </span>
+                <span className="inline-flex items-center gap-2 text-muted">
+                  <span className="h-3 w-1 rounded-full bg-[#3dd6c1]" />
+                  POS
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-4">
+                {signalLegendItems.map((item) => (
+                  <span key={item.label} className="group relative inline-flex items-center gap-2 text-muted">
+                    <span className={`h-2.5 w-5 rounded-full border bg-white/3 ${item.borderClassName}`} />
+                    {item.label}
+                    <span className="pointer-events-none absolute left-0 top-full z-10 mt-2 hidden whitespace-nowrap rounded-xl border border-white/10 bg-[#0b1320] px-3 py-2 text-[11px] text-foreground shadow-[0_12px_30px_rgba(0,0,0,0.35)] group-hover:block">
+                      {item.helpText}
+                    </span>
+                  </span>
+                ))}
+              </div>
+            </div>
+            <div className="mt-5 overflow-x-auto">
+              <div className="min-w-[720px]">
+                <div className="grid grid-cols-7 gap-2 text-center text-xs font-medium text-muted">
+                  {weekdayLabels.map((label) => (
+                    <div key={label} className="rounded-xl border border-white/8 bg-white/4 px-2 py-2">
+                      {label}
+                    </div>
+                  ))}
                 </div>
-              ))}
+                <div className="mt-3 grid grid-cols-7 gap-2">
+                  {Array.from({ length: leadingEmptyCellCount }).map((_, index) => (
+                    <div
+                      key={`leading-empty-${index}`}
+                      className="min-h-[128px] rounded-2xl border border-transparent"
+                      aria-hidden="true"
+                    />
+                  ))}
+                  {calendarData.map((day) => (
+                    <div
+                      key={day.date}
+                      className={`min-h-[128px] rounded-2xl border bg-white/4 p-3 ${
+                        calendarBorderClassName[day.signalLevel]
+                      }`}
+                    >
+                      <p className="text-sm font-medium">{day.date.slice(8)}일</p>
+                      <div className="mt-2 flex items-center gap-2 text-[11px] leading-5 text-foreground">
+                        <span className="h-4 w-1 rounded-full bg-[#ffb366]" />
+                        <span>{formatNumber(day.reported)}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-[11px] leading-5 text-foreground">
+                        <span className="h-4 w-1 rounded-full bg-[#3dd6c1]" />
+                        <span>{formatNumber(day.pos)}</span>
+                      </div>
+                    </div>
+                  ))}
+                  {Array.from({ length: trailingEmptyCellCount }).map((_, index) => (
+                    <div
+                      key={`trailing-empty-${index}`}
+                      className="min-h-[128px] rounded-2xl border border-transparent"
+                      aria-hidden="true"
+                    />
+                  ))}
+                </div>
+              </div>
             </div>
           </Card>
 

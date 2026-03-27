@@ -25,7 +25,13 @@ const config = {
   },
 }
 
-export function StatusBadge({ status }: { status: StoreStatus }) {
+export function StatusBadge({
+  status,
+  showIcon = true,
+}: {
+  status: StoreStatus
+  showIcon?: boolean
+}) {
   const item = config[status]
   const Icon = item.icon
 
@@ -36,7 +42,7 @@ export function StatusBadge({ status }: { status: StoreStatus }) {
         item.className,
       )}
     >
-      <Icon className="h-3.5 w-3.5" />
+      {showIcon ? <Icon className="h-3.5 w-3.5" /> : null}
       {item.label}
     </span>
   )

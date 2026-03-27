@@ -29,6 +29,8 @@ import {
   getStoreByCode,
   issues,
   monthlySales,
+  reviewLogs,
+  statusHistory,
 } from '../data/mockData'
 
 export function StoreDetailPage() {
@@ -95,7 +97,26 @@ export function StoreDetailPage() {
       helpText: '차이율 10% 초과',
     },
   ] as const
-
+  const comparisonBreakdownItems = [
+    { label: '총 POS 금액', value: store.posAmount, operator: 'base' },
+    { label: 'VAN', value: store.vanAmount, operator: 'plus' },
+    { label: 'PG', value: store.pgAmount, operator: 'plus' },
+    { label: '현금', value: store.cashAmount, operator: 'plus' },
+    { label: '할인', value: store.discountAmount, operator: 'minus' },
+    { label: '취소/환불', value: store.refundAmount, operator: 'minus' },
+  ] as const
+  const statusTextClassName = {
+    waiting: 'text-waiting',
+    normal: 'text-success',
+    review: 'text-warning',
+    suspicious: 'text-danger',
+  } as const
+  const statusLabelMap = {
+    waiting: '대기',
+    normal: '정상',
+    review: '확인 필요',
+    suspicious: '이상 의심',
+  } as const
   return (
     <>
       <Header month="2024년 1월">
@@ -115,19 +136,78 @@ export function StoreDetailPage() {
       </Header>
 
       <div className="space-y-6 px-4 py-6 md:px-6">
-        <div className="section-grid">
-          {[
-            ['신고금액', formatCurrency(store.reportAmount)],
-            ['비교 기준값', formatCurrency(store.comparisonAmount)],
-            ['차이금액', formatCurrency(store.differenceAmount)],
-            ['차이율', formatPercent(store.differenceRate)],
-          ].map(([label, value]) => (
-            <Card key={label}>
-              <p className="text-sm text-muted">{label}</p>
-              <p className="mt-3 text-3xl font-semibold">{value}</p>
-            </Card>
-          ))}
-        </div>
+        <Card>
+          <p className="text-sm uppercase tracking-[0.24em] text-primary">Comparison Breakdown</p>
+          <div className="mt-2 flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-semibold">비교 대상 금액 상세</h2>
+            <span className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-xs text-muted">
+              비교 기준: {store.reportBasis}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-muted">
+            업체 신고금액보다 먼저 검증해야 하는 POS 기준 금액 구성을 한 번에 확인할 수 있도록 실제 금액을 그대로 보여줍니다.
+          </p>
+          <div className="mt-4 grid gap-3 xl:grid-cols-2">
+            <div className="rounded-2xl border border-primary/18 bg-primary/8 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">신고금액</p>
+              <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(store.reportAmount)}</p>
+              <p className="mt-2 text-xs text-muted">업체 제출 기준 금액</p>
+            </div>
+            <div className="rounded-2xl border border-white/8 bg-white/4 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">비교 기준값</p>
+              <p className="mt-2 text-xl font-semibold text-foreground">{formatCurrency(store.comparisonAmount)}</p>
+              <p className="mt-2 text-xs text-muted">{store.reportBasis} 기준 비교값</p>
+            </div>
+            <div className="rounded-2xl border border-danger/18 bg-danger/6 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">차이금액</p>
+              <p className="mt-2 text-xl font-semibold text-danger">{formatCurrency(store.differenceAmount)}</p>
+              <p className="mt-2 text-xs text-muted">신고금액과 비교 기준값의 차이</p>
+            </div>
+            <div className="rounded-2xl border border-warning/18 bg-warning/6 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">차이율</p>
+              <p className="mt-2 text-xl font-semibold text-warning">{formatPercent(store.differenceRate)}</p>
+              <p className="mt-2 text-xs text-muted">현재 임시 기준상 10% 초과 시 이상 의심</p>
+            </div>
+            <div className="rounded-2xl border border-primary/18 bg-primary/8 p-4">
+              <p className="text-xs uppercase tracking-[0.18em] text-muted">최종 판정</p>
+              <p className={`mt-2 text-2xl font-semibold ${statusTextClassName[store.status]}`}>
+                {statusLabelMap[store.status]}
+              </p>
+              <p className="mt-2 text-xs text-muted">
+                차이금액 {formatCurrency(store.differenceAmount)}, 차이율 {formatPercent(store.differenceRate)} 기준 결과
+              </p>
+            </div>
+          </div>
+          <div className="mt-5 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {comparisonBreakdownItems.map((item) => (
+              <div key={item.label} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="text-sm text-muted">{item.label}</p>
+                  {item.operator === 'base' ? (
+                    <span className="rounded-full border border-white/8 bg-white/6 px-2.5 py-1 text-[11px] text-muted">
+                      기준값
+                    </span>
+                  ) : null}
+                </div>
+                <p
+                  className={`mt-2 text-lg font-semibold ${
+                    item.operator === 'plus'
+                      ? 'text-success'
+                      : item.operator === 'minus'
+                        ? 'text-danger'
+                        : 'text-foreground'
+                  }`}
+                >
+                  {item.operator === 'plus'
+                    ? `+${formatCurrency(item.value)}`
+                    : item.operator === 'minus'
+                      ? `-${formatCurrency(item.value).replace(/^₩/, '₩')}`
+                      : formatCurrency(item.value)}
+                </p>
+              </div>
+            ))}
+          </div>
+        </Card>
 
         <Card className="border-warning/20">
           <p className="text-sm uppercase tracking-[0.24em] text-warning">Judgement Basis</p>
@@ -157,6 +237,46 @@ export function StoreDetailPage() {
             </div>
           </div>
         </Card>
+
+        <div className="grid gap-6 xl:grid-cols-2">
+          <Card>
+            <p className="text-sm uppercase tracking-[0.24em] text-primary">Operation History</p>
+            <h2 className="mt-2 text-xl font-semibold">상태 전이 이력</h2>
+            <div className="mt-5 space-y-4">
+              {statusHistory.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{item.occurredAt}</p>
+                    <span className="text-xs text-muted">{item.actor}</span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    <StatusBadge status={item.fromStatus} />
+                    <span className="text-sm text-muted">→</span>
+                    <StatusBadge status={item.toStatus} />
+                  </div>
+                  <p className="mt-3 text-sm leading-6 text-muted">{item.summary}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card>
+            <p className="text-sm uppercase tracking-[0.24em] text-primary">Review History</p>
+            <h2 className="mt-2 text-xl font-semibold">확인 이력</h2>
+            <div className="mt-5 space-y-4">
+              {reviewLogs.map((item) => (
+                <div key={item.id} className="rounded-2xl border border-white/8 bg-white/4 p-4">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <p className="text-sm font-medium">{item.summary}</p>
+                    <span className="text-xs text-muted">{item.occurredAt}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-primary">{item.actor}</p>
+                  <p className="mt-3 text-sm leading-6 text-muted">{item.detail}</p>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </div>
 
         <div className="grid gap-6 xl:grid-cols-[1.25fr_0.75fr]">
           <Card>

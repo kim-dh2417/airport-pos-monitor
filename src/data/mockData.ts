@@ -14,6 +14,12 @@ export interface Store {
   paymentConsistency: '정합' | '불일치'
   internalStatus: '접수완료' | '대기' | '비교완료' | '재비교필요'
   lastUpdated: string
+  posAmount: number
+  vanAmount: number
+  pgAmount: number
+  cashAmount: number
+  discountAmount: number
+  refundAmount: number
   hidden?: boolean
   missingData?: string[]
 }
@@ -41,6 +47,23 @@ export interface MonthlySales {
   comparisonAmount: number
 }
 
+export interface StatusHistoryItem {
+  id: string
+  occurredAt: string
+  actor: string
+  fromStatus: StoreStatus
+  toStatus: StoreStatus
+  summary: string
+}
+
+export interface ReviewLogItem {
+  id: string
+  occurredAt: string
+  actor: string
+  summary: string
+  detail: string
+}
+
 export const stores: Store[] = [
   {
     id: '1',
@@ -56,6 +79,12 @@ export const stores: Store[] = [
     paymentConsistency: '불일치',
     internalStatus: '비교완료',
     lastUpdated: '2024-01-15 14:30',
+    posAmount: 158000000,
+    vanAmount: 104000000,
+    pgAmount: 18000000,
+    cashAmount: 36000000,
+    discountAmount: 9000000,
+    refundAmount: 3000000,
   },
   {
     id: '2',
@@ -71,6 +100,12 @@ export const stores: Store[] = [
     paymentConsistency: '불일치',
     internalStatus: '비교완료',
     lastUpdated: '2024-01-15 14:25',
+    posAmount: 52000000,
+    vanAmount: 30100000,
+    pgAmount: 6900000,
+    cashAmount: 15000000,
+    discountAmount: 2100000,
+    refundAmount: 900000,
   },
   {
     id: '3',
@@ -86,6 +121,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '비교완료',
     lastUpdated: '2024-01-15 14:20',
+    posAmount: 35000000,
+    vanAmount: 22000000,
+    pgAmount: 4000000,
+    cashAmount: 9000000,
+    discountAmount: 1200000,
+    refundAmount: 500000,
   },
   {
     id: '4',
@@ -101,6 +142,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '재비교필요',
     lastUpdated: '2024-01-15 14:18',
+    posAmount: 19600000,
+    vanAmount: 12100000,
+    pgAmount: 2200000,
+    cashAmount: 5300000,
+    discountAmount: 700000,
+    refundAmount: 300000,
   },
   {
     id: '5',
@@ -116,6 +163,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '비교완료',
     lastUpdated: '2024-01-15 14:15',
+    posAmount: 87200000,
+    vanAmount: 52200000,
+    pgAmount: 11800000,
+    cashAmount: 23200000,
+    discountAmount: 4100000,
+    refundAmount: 900000,
   },
   {
     id: '6',
@@ -131,6 +184,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '접수완료',
     lastUpdated: '2024-01-15 14:08',
+    posAmount: 56500000,
+    vanAmount: 32900000,
+    pgAmount: 7100000,
+    cashAmount: 16500000,
+    discountAmount: 1800000,
+    refundAmount: 600000,
     hidden: true,
   },
   {
@@ -147,6 +206,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '대기',
     lastUpdated: '2024-01-15 14:00',
+    posAmount: 28000000,
+    vanAmount: 0,
+    pgAmount: 0,
+    cashAmount: 0,
+    discountAmount: 0,
+    refundAmount: 0,
     missingData: ['매출신고'],
   },
   {
@@ -163,6 +228,12 @@ export const stores: Store[] = [
     paymentConsistency: '정합',
     internalStatus: '대기',
     lastUpdated: '2024-01-15 13:55',
+    posAmount: 0,
+    vanAmount: 0,
+    pgAmount: 0,
+    cashAmount: 0,
+    discountAmount: 0,
+    refundAmount: 0,
     missingData: ['매출신고', 'POS 데이터'],
   },
 ]
@@ -244,6 +315,49 @@ export const issues: Issue[] = [
     amount: 12000000,
     explainability: '낮음',
     status: '미확인',
+  },
+]
+
+export const statusHistory: StatusHistoryItem[] = [
+  {
+    id: 'sh-1',
+    occurredAt: '2024-01-27 09:10',
+    actor: '시스템',
+    fromStatus: 'waiting',
+    toStatus: 'review',
+    summary: '신고 데이터 수신 후 1차 비교에서 차이율이 임계치 내 확인 필요 구간으로 판정되었습니다.',
+  },
+  {
+    id: 'sh-2',
+    occurredAt: '2024-01-27 11:40',
+    actor: '시스템',
+    fromStatus: 'review',
+    toStatus: 'suspicious',
+    summary: '전자결제 정합성 불일치와 반복 차이 패턴이 함께 감지되어 이상 의심으로 상향되었습니다.',
+  },
+]
+
+export const reviewLogs: ReviewLogItem[] = [
+  {
+    id: 'rl-1',
+    occurredAt: '2024-01-27 09:32',
+    actor: '김운영',
+    summary: '매장 상세 확인',
+    detail: '판단 근거 패널과 일별 캘린더를 확인하고 행사 운영 여부 검토가 필요하다고 판단했습니다.',
+  },
+  {
+    id: 'rl-2',
+    occurredAt: '2024-01-27 10:18',
+    actor: '김운영',
+    summary: '재확인 후 검토 유지',
+    detail: '할인 행사 운영 사실을 반영해도 현금 비중 급증 사유는 추가 확인이 필요하다고 판단했습니다.',
+  },
+  {
+    id: 'rl-3',
+    occurredAt: '2024-01-27 11:55',
+    actor: '김운영',
+    summary: '최종 확인',
+    detail: '정산 데이터 재확인 필요성을 메모하고 이상 의심 상태 유지 여부를 다시 검토했습니다.',
   },
 ]
 
